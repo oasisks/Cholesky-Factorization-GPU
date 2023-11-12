@@ -1,8 +1,13 @@
-module Naive
+module NaiveGPU
+using CUDA
 
+function NaiveCholeskyGPU(matrix::Matrix) 
+    # println("GPU: ", CUDA.rand(2))
+    # L = CuArray{ComplexF64}(I, n, n)
+    # println("Array: ", L)
+end
 """
-For locality, we did it by column because julia is column based caching
-"""
+Convert this code to GPU
 function NaiveCholesky(matrix::Matrix)
     n = size(matrix, 1)
     L = zeros(ComplexF64, n, n)
@@ -25,6 +30,7 @@ function NaiveCholesky(matrix::Matrix)
     end
     return (L = L, U = adjoint(L))
 end
+"""
 
-export NaiveCholesky
+export NaiveCholeskyGPU
 end
