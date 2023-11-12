@@ -73,21 +73,18 @@ function TileImplementation(matrix::Matrix)
     end
 
     matrix = LowerTriangular(matrix)
-    println("\nMy Answer\n")
-    display(matrix)
 end
 
-n = 6
-A = RandomHermitianMatrixInt64(n)
-display(A)
-# println(eigen(A).values)
-c = cholesky(A)
+# n = 6
+# A = RandomHermitianMatrixInt64(n)
+# display(A)
+# c = cholesky(A)
 
-println("Lower triangular")
-display(c.L)
-A = convert(Matrix{Float64}, A)
+# println("Lower triangular")
+# display(c.L)
+# A = convert(Matrix{Float64}, A)
 
-TileImplementation(A)
+# TileImplementation(A)
 
 export TileImplementation
 end

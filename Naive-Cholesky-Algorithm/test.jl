@@ -1,8 +1,11 @@
 include("./Naive.jl")
 include("./NaiveGPU.jl")
 include("../utils/RandomMatrix.jl")
+include("./NaiveTile.jl")
+
 using .Naive
 using .RandomMatrix
+using .NaiveTile
 using Test
 using LinearAlgebra
 using .NaiveGPU
@@ -41,8 +44,15 @@ end
     @test isapprox(naive.U, juliaImplementation.U, atol=epsilon)
 end
 
-@testset "testing the naive tile implementation of the CPU" begin
-    n = 3
+@testset "testing the naive tile implementation of the CPU for even matrices" begin
+    n = 4
+    epsilon = 0.01
     A = RandomHermitianMatrixInt64(n)
-    display(A)
+    juliaImplementation = cholesky(A)
+
+    # fix in the future
+    A = convert(Matrix{Float64}, A)
+    naiveTile = TileImplementation(A)
+
+    @test isapprox(naiveTile, juliaImplementation.L, atol=epsilon)
 end
