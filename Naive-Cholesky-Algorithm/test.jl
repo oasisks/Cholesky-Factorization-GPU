@@ -1,5 +1,4 @@
 include("./Naive.jl")
-include("./NaiveGPU.jl")
 include("../utils/RandomMatrix.jl")
 include("./NaiveTile.jl")
 
@@ -8,8 +7,6 @@ using .RandomMatrix
 using .NaiveTile
 using Test
 using LinearAlgebra
-using .NaiveGPU
-
 
 @testset "small positive definite hermitian 3x3 matrix" begin
     matrix = [4 12 -16; 12 37 -43; -16 -43 98]
@@ -45,7 +42,7 @@ end
 end
 
 @testset "testing the naive tile implementation of the CPU for even matrices" begin
-    n = 4
+    n = 8
     epsilon = 0.01
     A = RandomHermitianMatrixInt64(n)
     juliaImplementation = cholesky(A)
