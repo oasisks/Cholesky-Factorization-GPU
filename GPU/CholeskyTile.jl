@@ -7,26 +7,52 @@ using .RandomMatrix
 using LinearAlgebra
 using KernelAbstractions, CUDA
 
-@kernel function cholesky_kernel!(matrix, output, col_start, current_col, row_start, row_end)
-    I, J = @index(Global, NTuple)
+@kernel function cholesky_kernel!(matrix, output, current_group, current_col, tilesize)
+    I_g, J_g = @index(Group, NTuple)
+    I, J = @index(Local, NTuple)
 
-    if J == current_col && row_start <= I <= row_end && I >= J
+    currentI = I_g * tilesize - (tilesize) + I
+    currentJ = J_g * tilesize - (tilesize) + J
+    # we will do this one column at a time
+    if I_g == current_group && J_g == current_group && currentI >= currentJ && currentJ == current_col
         temp_sum = zero(eltype(matrix))
 
         @inbounds begin
-            for _j = 1:J
-                temp_sum += output[I, _j] * conj(output[I, _j])
+            for _j = currentJ-J+1:currentJ
+                temp_sum += output[currentI, _j] * conj(output[currentI, _j])
             end
         end
 
         # this is on the diagonal
         if I == J
-            output[I, J] = sqrt(matrix[I, J] - temp_sum)
+            output[currentI, currentJ] = sqrt(matrix[currentI, currentJ] - temp_sum)
         else
-            output[I, J] = (1.0 / output[J, J] * (matrix[I, J] - temp_sum))
+            output[currentI, currentJ] = (1.0 / output[currentJ, currentJ] *
+                                          (matrix[currentI, currentJ] - temp_sum))
         end
     end
 end
+
+# @kernel function cholesky_kernel!(matrix, output, col_start, current_col, row_start, row_end)
+#     I, J = @index(Global, NTuple)
+
+#     if J == current_col && row_start <= I <= row_end && I >= J
+#         temp_sum = zero(eltype(matrix))
+
+#         @inbounds begin
+#             for _j = 1:J
+#                 temp_sum += output[I, _j] * conj(output[I, _j])
+#             end
+#         end
+
+#         # this is on the diagonal
+#         if I == J
+#             output[I, J] = sqrt(matrix[I, J] - temp_sum)
+#         else
+#             output[I, J] = (1.0 / output[J, J] * (matrix[I, J] - temp_sum))
+#         end
+#     end
+# end
 
 """
 This function performs the usual cholesky decomposition algorithm 
@@ -41,9 +67,13 @@ function dpotrf!(matrix, output, tilesize, k)
     kernel! = cholesky_kernel!(backend)
 
     for _j = j:j_e
-        kernel!(matrix, output, j, _j, i, i_e, ndrange=size(matrix))
+        kernel!(matrix, output, k, _j, tilesize, ndrange=size(matrix), workgroupsize=(tilesize, tilesize))
         KernelAbstractions.synchronize(backend)
     end
+    # for _j = j:j_e
+    #     kernel!(matrix, output, j, _j, i, i_e, ndrange=size(matrix))
+    #     KernelAbstractions.synchronize(backend)
+    # end
 end
 
 function CholesktFactorization(matrix, output, tilesize=2)
@@ -62,6 +92,7 @@ function CholesktFactorization(matrix, output, tilesize=2)
     end
 
     for k = 1:t
+        # println("Current Block ", k)
         dpotrf!(matrix, output, tilesize, k)
     end
 end
