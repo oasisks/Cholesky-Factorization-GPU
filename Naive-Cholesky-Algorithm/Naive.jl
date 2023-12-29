@@ -7,7 +7,6 @@ function NaiveCholesky(matrix::Matrix)
     n = size(matrix, 1)
     L = zeros(ComplexF64, n, n)
 
-    # Deprecated
     for j = 1:n
         sum = 0
         for k = 1:j
