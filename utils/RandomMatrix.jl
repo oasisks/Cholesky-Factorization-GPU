@@ -8,8 +8,8 @@ Returns a random positive definite hermitian matrix of size n
 # Arguments
 -   'n::Integer' the size of the matrix. Requires n to be positive. Throws an error if not positive
 """
-function RandomHermitianMatrixComplexF64(n::Number) 
-    if n < 2 
+function RandomHermitianMatrixComplexF64(n::Number)
+    if n < 2
         throw(DomainError("The value for n is out of bound for value $n"))
     end
 
@@ -29,7 +29,7 @@ end
 Returns a random hermitian matrix of size 
 """
 function RandomHermitianMatrixInt64(n::Integer)
-    if n < 2 
+    if n < 2
         throw(DomainError("The value for n is out of bound for value $n"))
     end
     A = rand(Int8, n, n)
@@ -41,14 +41,14 @@ function RandomHermitianMatrixInt64(n::Integer)
         A += (abs(l_min) + 1) * I
     end
     A = trunc.(Int, A)
-    return A
+    return convert(Matrix{Float64}, A)
 end
 
 """
 Returns a random hermitian matrix of size 
 """
 function RandomHermitianMatrixFloat64(n::Integer)
-    if n < 2 
+    if n < 2
         throw(DomainError("The value for n is out of bound for value $n"))
     end
     A = rand(Float64, n, n)

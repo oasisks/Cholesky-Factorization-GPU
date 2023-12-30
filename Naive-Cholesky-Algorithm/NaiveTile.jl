@@ -70,13 +70,13 @@ function TileImplementation(matrix::Matrix)
         end
 
         # we wait for the dsyrk its parallel computation
-        for n = k+1:t
-            for m = n+1:t
-                A = getTile(m, k, matrix, tile_size)
-                B = getTile(n, k, matrix, tile_size)
-                C = getTile(m, n, matrix, tile_size)
+        for j = k+1:t
+            for i = j+1:t
+                A = getTile(i, k, matrix, tile_size)
+                B = getTile(j, k, matrix, tile_size)
+                C = getTile(i, j, matrix, tile_size)
 
-                setTile!(m, n, matrix, tile_size, dgemm(A, B, C))
+                setTile!(i, j, matrix, tile_size, dgemm(A, B, C))
             end
         end
     end
@@ -84,7 +84,7 @@ function TileImplementation(matrix::Matrix)
     matrix = LowerTriangular(matrix)
 end
 
-n = 6
+n = 4
 A = RandomHermitianMatrixInt64(n)
 display(A)
 c = cholesky(A)
