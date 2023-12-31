@@ -7,6 +7,20 @@ using .RandomMatrix
 using LinearAlgebra
 using KernelAbstractions, CUDA
 
+@kernel function cholesky_diagonal_kernel!(matrix, k, current_col, tilesize)
+    i, j = @index(Global, NTuple)
+
+    if i == j && j == current_col
+        temp_sum = zero(eltype(matrix))
+        s = convert(Int, (k - 1) * tilesize + 1)
+        for _j = s:j-1
+            temp_sum += matrix[i, _j] * conj(matrix[i, _j])
+        end
+        # @print("matrix value: ", matrix[i, j], "; sum = ", temp_sum, "sqrt() = ", sqrt(matrix[i, j] - temp_sum), "\n")
+        matrix[i, j] = sqrt(matrix[i, j] - temp_sum)
+    end
+end
+
 @kernel function cholesky_kernel!(matrix, k, current_col, tilesize)
     I_g, J_g = @index(Group, NTuple)
     I, J = @index(Local, NTuple)
@@ -14,21 +28,15 @@ using KernelAbstractions, CUDA
     i = tilesize * (I_g - 1) + I
     j = tilesize * (J_g - 1) + J
     # we will do this one column at a time
-    if I_g == k && J_g == k && i >= j && j == current_col
+    if I_g == k && J_g == k && i > j && j == current_col
         temp_sum = zero(eltype(matrix))
         s = convert(Int, (k - 1) * tilesize + 1)
         for _j = s:j-1
-            temp_sum += matrix[i, _j] * conj(matrix[i, _j])
+            temp_sum += matrix[i, _j] * conj(matrix[j, _j])
         end
-
-        # diagonal
-        if I == J
-            # @print("matrix value: ", matrix[i, j], "; sum = ", temp_sum, "sqrt() = ", sqrt(matrix[i, j] - temp_sum), "\n")
-            matrix[i, j] = sqrt(matrix[i, j] - temp_sum)
-        else
-            matrix[i, j] = (1.0 / matrix[j, j] *
-                            (matrix[i, j] - temp_sum))
-        end
+        @print("Currently in: (", i, ", ", j, ") with temp_val = ", temp_sum, " matrix[j, j] = ", matrix[j, j], "\n")
+        matrix[i, j] = (1.0 / matrix[j, j] *
+                        (matrix[i, j] - temp_sum))
     end
 
     if i < j
@@ -84,6 +92,7 @@ end
         matrix[i, j] = matrix[i, j] - AA_t
     end
 end
+
 """
 This function performs C - A * B' in parallel where C is located in row i column j
     A = Matrix[i, k] and B = Matrix[j, k]
@@ -120,15 +129,19 @@ end
 This function performs the usual cholesky decomposition algorithm 
 """
 function dpotrf!(matrix, tilesize, k)
-    i = tilesize * k - (tilesize - 1)
     j = tilesize * k - (tilesize - 1)
-    i_e = tilesize * k
     j_e = tilesize * k
 
     backend = KernelAbstractions.get_backend(matrix)
     kernel! = cholesky_kernel!(backend)
+    diagonal_kernel! = cholesky_diagonal_kernel!(backend)
 
     for _j = j:j_e
+        # this performs the diagonal first
+        diagonal_kernel!(matrix, k, _j, tilesize, ndrange=size(matrix), workgroupsize=(tilesize, tilesize))
+        KernelAbstractions.synchronize(backend)
+
+        # this performs the tiles under the diagonal
         kernel!(matrix, k, _j, tilesize, ndrange=size(matrix), workgroupsize=(tilesize, tilesize))
         KernelAbstractions.synchronize(backend)
     end
@@ -177,7 +190,7 @@ function dgemm!(matrix, tilesize, k)
 end
 
 
-function CholesktFactorization(matrix, tilesize=2)
+function CholeskyFactorization(matrix, tilesize=2)
     n, m = size(matrix)
 
     if n != m
@@ -209,7 +222,7 @@ function CholesktFactorization(matrix, tilesize=2)
         dsyrk!(matrix, tilesize, k)
         # println("After performing DYSRK in iteration: ", k)
         # display(matrix)
-        println()
+        # println()
 
         # now we want to deal with the rest of the tiles
         dgemm!(matrix, tilesize, k)
@@ -221,7 +234,8 @@ function CholesktFactorization(matrix, tilesize=2)
 
 end
 
-n = 8
+n = 9
+tilesize = 3
 A = RandomHermitianMatrixInt64(n)
 juliaImplementation = cholesky(A)
 
@@ -233,7 +247,7 @@ display(juliaImplementation.L)
 
 A = CuArray(A)
 
-CholesktFactorization(A)
+CholeskyFactorization(A, tilesize)
 println("\nOur solution to the cholesky factorization")
 display(A)
 
