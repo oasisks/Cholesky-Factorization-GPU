@@ -34,7 +34,7 @@ end
         for _j = s:j-1
             temp_sum += matrix[i, _j] * conj(matrix[j, _j])
         end
-        @print("Currently in: (", i, ", ", j, ") with temp_val = ", temp_sum, " matrix[j, j] = ", matrix[j, j], "\n")
+        # @print("Currently in: (", i, ", ", j, ") with temp_val = ", temp_sum, " matrix[j, j] = ", matrix[j, j], "\n")
         matrix[i, j] = (1.0 / matrix[j, j] *
                         (matrix[i, j] - temp_sum))
     end
@@ -234,22 +234,22 @@ function CholeskyFactorization(matrix, tilesize=2)
 
 end
 
-n = 9
-tilesize = 3
-A = RandomHermitianMatrixInt64(n)
-juliaImplementation = cholesky(A)
+# n = 9
+# tilesize = 3
+# A = RandomHermitianMatrixInt64(n)
+# juliaImplementation = cholesky(A)
 
-println("Matrix A: ")
-display(A)
+# println("Matrix A: ")
+# display(A)
 
-println("\nThe solution to the cholesky factorization")
-display(juliaImplementation.L)
+# println("\nThe solution to the cholesky factorization")
+# display(juliaImplementation.L)
 
-A = CuArray(A)
+# A = CuArray(A)
 
-CholeskyFactorization(A, tilesize)
-println("\nOur solution to the cholesky factorization")
-display(A)
+# CholeskyFactorization(A, tilesize)
+# println("\nOur solution to the cholesky factorization")
+# display(A)
 
 end
 export CholeskyTile
