@@ -29,10 +29,10 @@ end
 end
 
 
-@testset "generating a random large matrix and test the times" begin 
+@testset "generating a random large matrix and test the times" begin
     n = 1000
     epsilon = 0.01
-    A = RandomHermitianMatrixComplexF64(n)
+    A = RandomHermitianMatrixFloat64(n)
 
     naive = NaiveCholesky(A)
     juliaImplementation = cholesky(A)
@@ -44,7 +44,7 @@ end
 @testset "testing the naive tile implementation of the CPU for even matrices" begin
     n = 8
     epsilon = 0.01
-    A = RandomHermitianMatrixInt64(n)
+    A = RandomHermitianMatrixFloat64(n)
     juliaImplementation = cholesky(A)
 
     # fix in the future

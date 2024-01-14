@@ -3,9 +3,11 @@ include("../utils/RandomMatrix.jl")
 # import Pkg    
 # Pkg.add(Pkg.PackageSpec(name="KernelAbstractions", version="0.9.14"))
 # Pkg.add("CUDA")
+using CUDA
 using .RandomMatrix
 using LinearAlgebra
-using KernelAbstractions, CUDA
+using KernelAbstractions
+const backend = CUDA.CUDABackend()
 
 @kernel function cholesky_diagonal_kernel!(matrix, k, current_col, tilesize)
     i, j = @index(Global, NTuple)
@@ -132,12 +134,13 @@ function dpotrf!(matrix, tilesize, k)
     j = tilesize * k - (tilesize - 1)
     j_e = tilesize * k
 
-    backend = KernelAbstractions.get_backend(matrix)
+    # backend = KernelAbstractions.get_backend(matrix)
     kernel! = cholesky_kernel!(backend)
     diagonal_kernel! = cholesky_diagonal_kernel!(backend)
 
     for _j = j:j_e
         # this performs the diagonal first
+        # println("Entering kernel")
         diagonal_kernel!(matrix, k, _j, tilesize, ndrange=size(matrix), workgroupsize=(tilesize, tilesize))
         KernelAbstractions.synchronize(backend)
 
@@ -154,7 +157,7 @@ This function performs ((A \\ B')') where A is the diagonal tile and the Bs are 
 function dtrsm!(matrix, tilesize, k)
     # first the 'output' contains the A matrix
     # second, the 'matrix' contains all the B's we need for the columns
-    backend = KernelAbstractions.get_backend(matrix)
+    # backend = KernelAbstractions.get_backend(matrix)
     kernel! = dtrsm_kernel!(backend)
 
     # # note this is the makeshift approach
@@ -170,7 +173,7 @@ end
 This function performs C - (A * A') where C is the diagonal matrix and A is the column matrix
 """
 function dsyrk!(matrix, tilesize, k)
-    backend = KernelAbstractions.get_backend(matrix)
+    # backend = KernelAbstractions.get_backend(matrix)
     kernel! = dsyrk_kernel!(backend)
 
     kernel!(matrix, tilesize, k, ndrange=size(matrix), workgroupsize=(tilesize, tilesize))
@@ -182,7 +185,7 @@ This function performs C - A * B' where C is located in row m column n
     A = Matrix[m, k] and B = Matrix[n, k]
 """
 function dgemm!(matrix, tilesize, k)
-    backend = KernelAbstractions.get_backend(matrix)
+    # backend = KernelAbstractions.get_backend(matrix)
     kernel! = dgemm_kernel!(backend)
 
     kernel!(matrix, tilesize, k, ndrange=size(matrix), workgroupsize=(tilesize, tilesize))
@@ -234,22 +237,22 @@ function CholeskyFactorization(matrix, tilesize=2)
 
 end
 
-# n = 9
-# tilesize = 3
-# A = RandomHermitianMatrixInt64(n)
-# juliaImplementation = cholesky(A)
+n = 9
+tilesize = 3
+A = RandomHermitianMatrixFloat64(n)
+juliaImplementation = cholesky(A)
 
-# println("Matrix A: ")
-# display(A)
+println("Matrix A: ")
+display(A)
 
-# println("\nThe solution to the cholesky factorization")
-# display(juliaImplementation.L)
+println("\nThe solution to the cholesky factorization")
+display(juliaImplementation.L)
 
-# A = CuArray(A)
+A = CuArray(A)
 
-# CholeskyFactorization(A, tilesize)
-# println("\nOur solution to the cholesky factorization")
-# display(A)
+CholeskyFactorization(A, tilesize)
+println("\nOur solution to the cholesky factorization")
+display(A)
 
 end
 export CholeskyTile

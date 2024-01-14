@@ -85,13 +85,12 @@ function TileImplementation(matrix::Matrix)
 end
 
 n = 4
-A = RandomHermitianMatrixInt64(n)
+A = RandomHermitianMatrixFloat64(n)
 display(A)
 c = cholesky(A)
 
 println("Lower triangular")
 display(c.L)
-A = convert(Matrix{Float64}, A)
 
 # TileImplementation(A)
 
